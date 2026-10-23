@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>空間映象 RoomCraft 3D | 全屋全場域配置與 3D 沉浸式裝潢工作室</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            warm: {
+              50: '#FBF9F5',
+              100: '#F4EFE6',
+              200: '#E8DFD0',
+              800: '#4A433A',
+              900: '#26221D'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="h-screen flex flex-col bg-warm-50 text-stone-800 antialiased overflow-hidden select-none">
+
+  <!-- 1. 頂部主要導航欄 (Top Header) -->
+  <header class="h-14 border-b border-stone-200 bg-white/95 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between z-20 flex-shrink-0">
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 rounded-xl bg-stone-900 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+        3D
+      </div>
+      <div>
+        <h1 class="text-sm font-bold text-stone-900 tracking-tight">空間映象 RoomCraft 3D</h1>
+        <p class="text-[10px] text-stone-500 font-medium">全屋全場域 · 廠商材質 · 家具尺寸配比模擬</p>
+      </div>
+      <div class="h-4 w-px bg-stone-200 mx-2 hidden md:block"></div>
+      <div class="hidden md:flex items-center space-x-2 text-xs text-stone-600 bg-stone-100 px-2.5 py-1 rounded-full">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span id="current-space-badge" class="font-bold text-stone-900">🛋️ 客廳空間</span>
+        <span class="text-stone-300">|</span>
+        <span id="pings-display" class="font-bold text-stone-800">10 坪</span>
+        <span id="m2-display" class="text-stone-500">約 33.1 m²</span>
+      </div>
+    </div>
+
+    <!-- 頂部操作鈕 -->
+    <div class="flex items-center space-x-2">
+      <button onclick="window.app.openFurnitureModal()" class="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-amber-700 text-white hover:bg-amber-800 transition shadow-sm flex items-center space-x-1.5">
+        <span>🪑</span>
+        <span>放入家具照片與尺寸模擬</span>
+      </button>
+      <button onclick="window.app.openAIPromptModal()" class="glass-pill px-3 py-1.5 text-xs font-semibold rounded-xl text-stone-700 hover:text-stone-900 flex items-center space-x-1.5 shadow-sm">
+        <span>✨</span>
+        <span class="hidden sm:inline">AI 效果圖提示詞</span>
+      </button>
+      <button onclick="window.app.exportDesignReport()" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-stone-900 text-white hover:bg-stone-800 transition shadow-sm flex items-center space-x-1.5">
+        <span>📄</span>
+        <span>匯出規格書</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 2. 全場域空間切換專用導航列 (12 大空間橫向切換) -->
+  <div class="bg-stone-100/90 border-b border-stone-200 px-4 py-1.5 flex items-center space-x-2 overflow-x-auto z-10 flex-shrink-0">
+    <span class="text-[11px] font-bold text-stone-500 uppercase tracking-wider whitespace-nowrap hidden sm:inline mr-1">選擇空間配置:</span>
+    <div id="space-selector-bar" class="flex items-center space-x-1.5">
+      <!-- 由 App 動態渲染 12 個空間按鈕 -->
+    </div>
+  </div>
+
+  <!-- 3. 主介面主體 (Sidebar + 3D Viewport) -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- 左側面板 (Tabs & Controls) -->
+    <aside class="w-full md:w-[420px] lg:w-[460px] border-r border-stone-200 bg-white flex flex-col flex-shrink-0 z-10 shadow-lg md:shadow-none">
+      
+      <!-- Tab 按鈕列 -->
+      <div class="flex border-b border-stone-200 bg-stone-50 text-xs font-semibold">
+        <button id="tab-btn-materials" class="flex-1 py-3 border-b-2 border-stone-900 text-stone-900 text-center transition" onclick="switchTab('materials')">
+          🎨 材質與色彩
+        </button>
+        <button id="tab-btn-photo" class="flex-1 py-3 border-b-2 border-transparent text-stone-500 hover:text-stone-800 text-center transition" onclick="switchTab('photo')">
+          📸 空間與照片
+        </button>
+        <button id="tab-btn-advice" class="flex-1 py-3 border-b-2 border-transparent text-stone-500 hover:text-stone-800 text-center transition" onclick="switchTab('advice')">
+          💡 動線與尺度
+        </button>
+        <button id="tab-btn-youtube" class="flex-1 py-3 border-b-2 border-transparent text-stone-500 hover:text-stone-800 text-center transition" onclick="switchTab('youtube')">
+          🎬 影片與靈感
+        </button>
+      </div>
+
+      <!-- Tab 內容容器 (可垂直捲動) -->
+      <div class="flex-1 overflow-y-auto p-5 space-y-6">
+
+        <!-- ================= Tab 1: 材質與色彩 ================= -->
+        <div id="tab-content-materials" class="space-y-6">
+          
+          <!-- 當前空間重點提示 -->
+          <div class="p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-center justify-between text-xs">
+            <span class="font-bold text-amber-900">核心配置重點:</span>
+            <span id="current-space-focus" class="text-amber-800 truncate ml-2">三人沙發、雙拼圓茶几、懸挑電視牆</span>
+          </div>
+
+          <!-- 60-30-10 黃金配比儀表板 -->
+          <div class="p-4 rounded-2xl bg-stone-50 border border-stone-200">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-stone-800">色彩空間平衡 (60-30-10 法則)</span>
+              <div class="flex items-center space-x-1">
+                <span class="text-[11px] text-stone-500">和諧指數:</span>
+                <span id="harmony-score-val" class="text-xs font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded">92</span>
+              </div>
+            </div>
+
+            <div class="h-3 w-full rounded-full overflow-hidden flex shadow-inner border border-stone-200 mb-2">
+              <div id="ratio-bar-base" class="ratio-bar-segment h-full w-[60%]" style="background-color: #F7F4EE;" title="基底色 60%"></div>
+              <div id="ratio-bar-secondary" class="ratio-bar-segment h-full w-[30%]" style="background-color: #E2DBD0;" title="主體色 30%"></div>
+              <div id="ratio-bar-accent" class="ratio-bar-segment h-full w-[10%]" style="background-color: #C8A365;" title="點綴色 10%"></div>
+            </div>
+
+            <div class="flex justify-between text-[10px] text-stone-500 font-medium">
+              <span>基底 60% (主牆/地坪)</span>
+              <span>主體 30% (家具/主件)</span>
+              <span>點綴 10% (五金/飾品)</span>
+            </div>
+          </div>
+
+          <!-- 浴室專屬：lib 實拍樣品地壁自由搭配台 -->
+          <div class="p-4 rounded-2xl bg-gradient-to-br from-amber-50/80 via-stone-50 to-white border border-amber-200/90 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold text-amber-950 uppercase tracking-wider flex items-center space-x-1.5">
+                <span>🛁</span>
+                <span>實拍石板樣品浴室地壁自由搭配台</span>
+              </h3>
+              <span class="text-[10px] text-amber-900 bg-amber-100/90 border border-amber-300 px-2 py-0.5 rounded-full font-bold">lib 實拍照提取</span>
+            </div>
+            <p class="text-[11px] text-stone-600 leading-relaxed">
+              已自動載入 <code class="text-amber-900 font-mono text-[10px] bg-amber-100/60 px-1 py-0.2 rounded">lib/</code> 中的 4 款實拍石板樣品與提煉色彩，點擊即可自由混搭衛浴地坪與主牆紋理！
+            </p>
+            <div id="bathroom-studio-container" class="space-y-3 pt-1"></div>
+          </div>
+
+          <!-- 廠商材質照片上傳專區 (Vendor Custom Materials) -->
+          <div class="p-3.5 rounded-2xl bg-amber-50/40 border border-amber-200/90 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wider flex items-center space-x-1.5">
+                <span>📸</span>
+                <span>新增廠商材質 / 色票照片</span>
+              </h3>
+              <span class="text-[10px] text-amber-900 bg-amber-100 px-1.5 py-0.5 rounded font-bold">3D 即時貼圖</span>
+            </div>
+            <p class="text-[11px] text-stone-600 leading-relaxed">
+              上傳廠商提供的實體地磚、木地板、壁紙或布料照片，系統自動建立 3D 紋理貼圖並採樣主色調！
+            </p>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="text" id="vendor-material-name" placeholder="材質名稱 (例如: 義大利岩板)" class="text-xs p-2 bg-white border border-stone-200 rounded-xl outline-none focus:border-stone-800">
+              <select id="vendor-material-target" class="text-xs p-2 bg-white border border-stone-200 rounded-xl outline-none focus:border-stone-800 text-stone-700 font-medium">
+                <option value="floor">貼至 3D 地坪</option>
+                <option value="wall">貼至 3D 主牆面</option>
+                <option value="sofa">貼至 3D 家具布料</option>
+              </select>
+            </div>
+            <label class="flex items-center justify-center p-2.5 rounded-xl border-2 border-dashed border-stone-300 hover:border-stone-800 bg-white cursor-pointer transition text-xs font-semibold text-stone-700">
+              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              <span>選擇廠商照片上傳並套用</span>
+              <input type="file" id="vendor-material-input" accept="image/*" class="hidden">
+            </label>
+            <div id="custom-materials-list" class="space-y-1.5 pt-1"></div>
+          </div>
+
+          <!-- 一鍵風格預設 -->
+          <div>
+            <div class="flex items-center justify-between mb-2.5">
+              <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wider">精選設計師風格配方</h3>
+              <span class="text-[11px] text-stone-500">一鍵同步 3D 與材質</span>
+            </div>
+            <div id="preset-styles-container" class="grid grid-cols-2 gap-2.5"></div>
+          </div>
+
+          <!-- 地坪材質挑選 -->
+          <div>
+            <div class="flex items-center justify-between mb-2.5">
+              <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wider">地坪/地面材質 (Floor Material)</h3>
+              <span class="text-[11px] text-stone-500">室內木紋 · 防滑軟木 · 戶外柚木 · 青石板</span>
+            </div>
+            <div id="floor-options-container" class="grid grid-cols-2 gap-2"></div>
+          </div>
+
+          <!-- 主牆面顏色挑選 -->
+          <div>
+            <div class="flex items-center justify-between mb-2.5">
+              <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wider">主牆面色調 (Wall Color)</h3>
+              <label class="text-[11px] text-stone-500 flex items-center space-x-1 cursor-pointer hover:text-stone-900">
+                <span>自訂 Hex</span>
+                <input type="color" id="custom-wall-picker" value="#F7F4EE" class="w-4 h-4 rounded cursor-pointer border-0 p-0">
+              </label>
+            </div>
+            <div id="wall-options-container" class="grid grid-cols-3 gap-2"></div>
+          </div>
+
+          <!-- 家具/主件布藝材質 -->
+          <div>
+            <div class="flex items-center justify-between mb-2.5">
+              <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wider">核心家具/布料材質 (Main Fabric)</h3>
+              <label class="text-[11px] text-stone-500 flex items-center space-x-1 cursor-pointer hover:text-stone-900">
+                <span>自訂</span>
+                <input type="color" id="custom-sofa-picker" value="#E2DBD0" class="w-4 h-4 rounded cursor-pointer border-0 p-0">
+              </label>
+            </div>
+            <div id="sofa-options-container" class="space-y-1.5"></div>
+          </div>
+
+          <!-- 點綴色與五金 -->
+          <div>
+            <div class="flex items-center justify-between mb-2.5">
+              <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wider">亮點點綴與五金 (Accent 10%)</h3>
+              <span class="text-[11px] text-stone-500">抱枕 / 金屬細腳 / 燈具</span>
+            </div>
+            <div id="accent-options-container" class="flex flex-wrap gap-2"></div>
+          </div>
+
+        </div>
+
+        <!-- ================= Tab 2: 空間與照片 ================= -->
+        <div id="tab-content-photo" class="space-y-6 hidden">
+          
+          <!-- 坪數大小滑桿 -->
+          <div class="p-4 rounded-2xl bg-stone-50 border border-stone-200">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-stone-800">空間坪數調整</span>
+              <span class="text-sm font-bold text-stone-900 font-mono"><span id="slider-val">10</span> 坪</span>
+            </div>
+            <input type="range" id="pings-slider" min="3" max="35" value="10" step="1" class="w-full mb-3" oninput="document.getElementById('slider-val').textContent = this.value">
+            <div class="flex justify-between text-[11px] text-stone-500">
+              <span>微型空間</span>
+              <span>標準尺度</span>
+              <span>開放大場域</span>
+            </div>
+          </div>
+
+          <!-- 照片上傳與 AI 取色 -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wider">上傳房間照片 / 平面圖</h3>
+              <span class="text-[11px] text-stone-500">自動萃取色彩</span>
+            </div>
+
+            <div id="photo-drop-zone" class="border-2 border-dashed border-stone-300 hover:border-stone-500 rounded-2xl p-6 text-center cursor-pointer transition bg-stone-50/60">
+              <input type="file" id="room-photo-input" accept="image/*" class="hidden">
+              <div id="photo-upload-prompt" class="space-y-2">
+                <div class="w-10 h-10 mx-auto rounded-full bg-white shadow-sm flex items-center justify-center text-stone-600">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                <div class="text-xs font-semibold text-stone-800">點擊或拖曳現場照片至此</div>
+                <div class="text-[11px] text-stone-500">支援 JPG、PNG 格式，系統將自動分析主色調</div>
+              </div>
+              
+              <div id="photo-preview" class="hidden space-y-3">
+                <img id="photo-preview-img" class="w-full h-40 object-cover rounded-xl shadow-sm" alt="Preview">
+                <span class="text-[11px] text-stone-500 block">點擊可重新上傳照片</span>
+              </div>
+            </div>
+
+            <div id="extracted-colors-container"></div>
+          </div>
+
+          <!-- 現場丈量檢核 -->
+          <div class="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80">
+            <h4 class="text-xs font-bold text-amber-900 mb-2">📌 空間丈量必備檢查項</h4>
+            <ul class="text-[11px] text-amber-800 space-y-1.5 list-disc list-inside leading-relaxed">
+              <li>確認大門、電梯、轉角寬度是否大於 85cm，確保大型家具順利進場。</li>
+              <li>注意衛浴/戶外庭院排水坡度，室內無障礙走道避免門檻落差。</li>
+              <li>預留足夠插座位置，特別是廚房料理電器、BBQ 戶外防水插座。</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- ================= Tab 3: 動線與尺度 ================= -->
+        <div id="tab-content-advice" class="space-y-6 hidden">
+          
+          <div>
+            <div class="flex items-center justify-between mb-2.5">
+              <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wider">人體工學與配置尺度建議</h3>
+              <span class="text-[11px] text-stone-500">依當前空間動態計算</span>
+            </div>
+            <div id="furniture-advice-list" class="space-y-2.5"></div>
+          </div>
+
+          <div>
+            <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wider mb-2.5">避坑心法與專家指引</h3>
+            <div id="tips-container" class="space-y-2.5"></div>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-stone-50 border border-stone-200">
+            <h4 class="text-xs font-bold text-stone-800 mb-2">💰 預算黃金分配法則</h4>
+            <div id="budget-breakdown-container"></div>
+          </div>
+
+        </div>
+
+        <!-- ================= Tab 4: 影片與靈感 ================= -->
+        <div id="tab-content-youtube" class="space-y-6 hidden">
+          
+          <div>
+            <div class="flex items-center justify-between mb-2.5">
+              <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wider">精選實體改造 YouTube 影片</h3>
+              <span class="text-[11px] text-stone-500">點擊卡片直接播放</span>
+            </div>
+            <div id="youtube-videos-container" class="space-y-3"></div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-2.5">
+              <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wider">實體完工照靈感庫</h3>
+              <span class="text-[11px] text-stone-500">附配色分析</span>
+            </div>
+            <div id="real-cases-container" class="space-y-3.5"></div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </aside>
+
+    <!-- 右側 3D 沉浸式實境畫布 (3D Virtual Room Area) -->
+    <main class="flex-1 relative bg-stone-100 overflow-hidden flex flex-col">
+      
+      <!-- 3D Canvas 容器 -->
+      <div id="canvas-container" class="w-full h-full relative cursor-grab active:cursor-grabbing">
+        
+        <!-- 頂部浮動控制欄 (Camera & Light Controls) -->
+        <div class="viewport-overlay top-4 left-4 right-4 flex flex-wrap items-center justify-between gap-2 z-10">
+          
+          <!-- 模式切換：360° 全景軌道 vs 走進去漫遊 -->
+          <div class="flex items-center p-1 rounded-xl bg-white/80 backdrop-blur-md border border-stone-200/80 shadow-sm space-x-1">
+            <button id="btn-mode-orbit" onclick="window.app.setCameraMode('orbit')" class="glass-pill px-3 py-1.5 text-xs font-semibold rounded-lg bg-stone-900 text-white shadow-sm flex items-center space-x-1.5">
+              <span>🔄</span>
+              <span>360° 全景模式</span>
+            </button>
+            <button id="btn-mode-walkin" onclick="window.app.setCameraMode('walkin')" class="glass-pill px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/80 text-stone-700 hover:bg-white flex items-center space-x-1.5">
+              <span>🚶</span>
+              <span>走進去漫遊 (第一人稱)</span>
+            </button>
+          </div>
+
+          <!-- 快捷視角按鈕 -->
+          <div class="flex items-center p-1 rounded-xl bg-white/80 backdrop-blur-md border border-stone-200/80 shadow-sm space-x-1">
+            <button onclick="window.app.setCameraPreset('perspective')" class="px-2.5 py-1 text-xs font-medium text-stone-700 hover:bg-white rounded-lg transition" title="立體透視角">
+              透視
+            </button>
+            <button onclick="window.app.setCameraPreset('front')" class="px-2.5 py-1 text-xs font-medium text-stone-700 hover:bg-white rounded-lg transition" title="正面平視">
+              正面
+            </button>
+            <button onclick="window.app.setCameraPreset('bird')" class="px-2.5 py-1 text-xs font-medium text-stone-700 hover:bg-white rounded-lg transition" title="俯視鳥瞰圖">
+              俯瞰
+            </button>
+            <button onclick="window.app.setCameraPreset('window')" class="px-2.5 py-1 text-xs font-medium text-stone-700 hover:bg-white rounded-lg transition" title="邊角景觀視角">
+              景觀
+            </button>
+          </div>
+
+          <!-- 光影氛圍時段 -->
+          <div class="flex items-center p-1 rounded-xl bg-white/80 backdrop-blur-md border border-stone-200/80 shadow-sm space-x-1">
+            <button data-time="day" onclick="window.app.setTimeOfDay('day')" class="time-btn px-2.5 py-1 text-xs font-medium bg-stone-900 text-white rounded-lg transition flex items-center space-x-1">
+              <span>☀️</span>
+              <span class="hidden md:inline">日光</span>
+            </button>
+            <button data-time="sunset" onclick="window.app.setTimeOfDay('sunset')" class="time-btn px-2.5 py-1 text-xs font-medium bg-white text-stone-700 hover:bg-stone-50 rounded-lg transition flex items-center space-x-1">
+              <span>🌅</span>
+              <span class="hidden md:inline">暖陽</span>
+            </button>
+            <button data-time="night" onclick="window.app.setTimeOfDay('night')" class="time-btn px-2.5 py-1 text-xs font-medium bg-white text-stone-700 hover:bg-stone-50 rounded-lg transition flex items-center space-x-1">
+              <span>🌙</span>
+              <span class="hidden md:inline">夜間情境</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- 底部浮動操作提示與走動搖桿 -->
+        <div class="viewport-overlay bottom-4 left-4 right-4 flex items-end justify-between z-10 pointer-events-none">
+          
+          <div class="glass-panel px-4 py-2 rounded-xl text-xs text-stone-700 shadow-md flex items-center space-x-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="view-mode-hint">🔄 360° 全景模式：按住滑鼠左鍵旋轉角度，滾輪縮放，右鍵平移</span>
+          </div>
+
+          <!-- 第一人稱走動虛擬按鈕盤 -->
+          <div id="walk-control-pad" class="walk-control-pad hidden pointer-events-auto">
+            <button id="pad-btn-q" class="pad-btn" title="向左轉 (Q)">↶</button>
+            <button id="pad-btn-w" class="pad-btn" title="前進 (W)">↑</button>
+            <button id="pad-btn-e" class="pad-btn" title="向右轉 (E)">↷</button>
+            <button id="pad-btn-a" class="pad-btn" title="向左橫移 (A)">←</button>
+            <button id="pad-btn-s" class="pad-btn" title="後退 (S)">↓</button>
+            <button id="pad-btn-d" class="pad-btn" title="向右橫移 (D)">→</button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- 4. 自訂家具實體照片與尺寸配比規劃模擬 Modal (Furniture Planner) -->
+  <div id="furniture-modal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+    <div class="bg-white rounded-3xl max-w-4xl w-full max-h-[92vh] overflow-y-auto shadow-2xl flex flex-col border border-stone-200">
+      
+      <!-- 標題欄 -->
+      <div class="p-4 sm:p-5 border-b border-stone-200 flex items-center justify-between bg-stone-50">
+        <div>
+          <h3 class="font-bold text-stone-900 text-sm sm:text-base flex items-center space-x-2">
+            <span>🪑</span>
+            <span>自訂家具照片與尺寸配比整體規劃模擬</span>
+          </h3>
+          <p class="text-xs text-stone-500 mt-0.5">放入看中的家具實拍照片，填入長寬高尺寸，系統即時模擬佔地配比與動線！</p>
+        </div>
+        <button onclick="window.app.closeFurnitureModal()" class="w-8 h-8 rounded-full bg-stone-200 hover:bg-stone-300 text-stone-700 flex items-center justify-center transition">✕</button>
+      </div>
+
+      <!-- 內容區 (左右兩欄) -->
+      <div class="p-5 grid grid-cols-1 md:grid-cols-12 gap-6">
+        
+        <!-- 左欄: 照片上傳與尺寸輸入 -->
+        <div class="md:col-span-5 space-y-4">
+          
+          <!-- 家具照片上傳框 -->
+          <div>
+            <label class="text-xs font-bold text-stone-800 uppercase tracking-wider block mb-1.5">家具實體照片</label>
+            <div class="relative h-44 w-full rounded-2xl bg-stone-100 border-2 border-dashed border-stone-300 hover:border-stone-500 overflow-hidden flex flex-col items-center justify-center cursor-pointer group">
+              <input type="file" id="custom-furniture-photo-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-10">
+              <img id="furniture-photo-preview" src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80" class="w-full h-full object-cover" alt="Furniture">
+              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-semibold">
+                點擊更換家具照片
+              </div>
+            </div>
+            <span class="text-[10px] text-stone-500 mt-1 block">可上傳手機在家具行實拍照片或型錄圖片</span>
+          </div>
+
+          <!-- 尺寸輸入欄位 (公分) -->
+          <div class="space-y-3">
+            <div>
+              <label class="text-[11px] font-bold text-stone-700 block mb-1">家具名稱</label>
+              <input type="text" id="furn-input-name" value="新挑選三人沙發" oninput="window.app.updateFurnitureDimensions()" class="w-full text-xs p-2.5 bg-stone-50 border border-stone-200 rounded-xl outline-none focus:border-stone-800 font-medium">
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+              <div>
+                <label class="text-[11px] font-bold text-stone-700 block mb-1">長度 (L) cm</label>
+                <input type="number" id="furn-input-length" value="220" min="40" max="600" oninput="window.app.updateFurnitureDimensions()" class="w-full text-xs p-2 bg-stone-50 border border-stone-200 rounded-xl outline-none focus:border-stone-800 font-mono text-center font-bold">
+              </div>
+              <div>
+                <label class="text-[11px] font-bold text-stone-700 block mb-1">寬度/深 (W) cm</label>
+                <input type="number" id="furn-input-width" value="90" min="30" max="400" oninput="window.app.updateFurnitureDimensions()" class="w-full text-xs p-2 bg-stone-50 border border-stone-200 rounded-xl outline-none focus:border-stone-800 font-mono text-center font-bold">
+              </div>
+              <div>
+                <label class="text-[11px] font-bold text-stone-700 block mb-1">高度 (H) cm</label>
+                <input type="number" id="furn-input-height" value="80" min="20" max="300" oninput="window.app.updateFurnitureDimensions()" class="w-full text-xs p-2 bg-stone-50 border border-stone-200 rounded-xl outline-none focus:border-stone-800 font-mono text-center font-bold">
+              </div>
+            </div>
+          </div>
+
+          <!-- 3D 空間投放切換 -->
+          <div class="pt-2">
+            <button id="btn-toggle-furniture-3d" onclick="window.app.toggleCustomFurniture3D()" class="w-full py-2.5 bg-stone-900 text-white text-xs font-semibold rounded-xl hover:bg-stone-800 transition shadow-sm flex items-center justify-center space-x-1.5">
+              <span>👀</span>
+              <span>在 3D 空間中投放此家具 (真實比例量體)</span>
+            </button>
+            <span class="text-[10px] text-stone-500 text-center block mt-1.5">投放後可在右側 3D 畫面中第一人稱走近檢視真實體積</span>
+          </div>
+
+        </div>
+
+        <!-- 右欄: 尺寸配比分析與 2D 比例模擬圖 -->
+        <div class="md:col-span-7 space-y-4">
+          
+          <!-- 尺寸配比診斷結果卡片 -->
+          <div class="p-4 bg-stone-50 rounded-2xl border border-stone-200 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-stone-800">空間配比指標診斷</span>
+              <span id="sim-ratio-badge" class="px-2 py-0.5 rounded-full text-[11px] font-bold border text-emerald-700 bg-emerald-100 border-emerald-300">黃金尺度配比</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 text-xs">
+              <div class="p-2.5 bg-white rounded-xl border border-stone-200">
+                <div class="text-[10px] text-stone-500">地坪佔比</div>
+                <div id="sim-ratio-val" class="text-base font-extrabold text-stone-900 font-mono">19.8%</div>
+                <div id="sim-area-val" class="text-[10px] text-stone-500 mt-0.5">家具 1.98 m² / 空間 10 坪</div>
+              </div>
+              <div class="p-2.5 bg-white rounded-xl border border-stone-200">
+                <div class="text-[10px] text-stone-500">動線餘裕預估</div>
+                <div id="sim-walkway-val" class="text-base font-extrabold text-stone-900 font-mono">預估走道 85 cm</div>
+                <div class="text-[10px] text-emerald-700 font-medium mt-0.5">高於標準 75cm 通行順暢</div>
+              </div>
+            </div>
+
+            <p id="sim-advice-text" class="text-xs text-stone-700 leading-relaxed pt-1">
+              此家具佔房間總地坪約 19.8%，佔比適中，能維持良好空間呼吸感與生活動線。
+            </p>
+          </div>
+
+          <!-- 2D 比例平面規劃配置圖 -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-bold text-stone-800 uppercase tracking-wider">2D 等比例平面配置圖 (含實物照片)</span>
+              <button onclick="window.app.downloadCompositeMockup()" class="text-xs text-amber-800 hover:text-amber-900 font-semibold flex items-center space-x-1">
+                <span>📥</span>
+                <span>下載效果圖</span>
+              </button>
+            </div>
+            <div class="w-full bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-inner flex items-center justify-center p-2">
+              <canvas id="furniture-floorplan-canvas" class="w-full h-auto max-h-64 object-contain rounded-xl"></canvas>
+            </div>
+            <span class="text-[10px] text-stone-500 block text-right mt-1">比例尺已依房間真實坪數換算</span>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 5. YouTube 影片播放 Modal -->
+  <div id="video-modal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-3xl w-full overflow-hidden shadow-2xl flex flex-col border border-stone-200">
+      <div class="p-4 border-b border-stone-200 flex items-center justify-between bg-stone-50">
+        <h3 id="video-modal-title" class="font-bold text-stone-800 text-sm truncate mr-4">裝潢影片播放</h3>
+        <button onclick="window.app.closeVideoModal()" class="w-8 h-8 rounded-full bg-stone-200 hover:bg-stone-300 text-stone-700 flex items-center justify-center transition">✕</button>
+      </div>
+      <div class="relative w-full aspect-video bg-black">
+        <iframe id="youtube-player-iframe" class="w-full h-full" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+      <div class="p-4 bg-white flex items-center justify-between">
+        <p id="video-modal-desc" class="text-xs text-stone-600 line-clamp-2 flex-1 mr-4"></p>
+        <a id="video-external-link" href="#" target="_blank" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl flex items-center space-x-1.5 transition flex-shrink-0">
+          <span>在 YouTube 開啟</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. AI 效果圖提示詞 Modal -->
+  <div id="ai-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-stone-200 space-y-5">
+      <div class="flex items-center justify-between pb-3 border-b border-stone-200">
+        <div>
+          <h3 class="text-base font-bold text-stone-900">✨ AI 概念效果圖生成指令</h3>
+          <p class="text-xs text-stone-500">已自動根據您目前選配的空間、坪數、材質、顏色與採光產生</p>
+        </div>
+        <button onclick="window.app.closeAIPromptModal()" class="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center">✕</button>
+      </div>
+
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-stone-800">Midjourney v6 / DALL-E 3 專用英文提示詞:</label>
+          <button onclick="window.app.copyPrompt('ai-prompt-en')" class="text-xs text-stone-900 font-semibold underline hover:text-amber-800">複製英文 Prompt</button>
+        </div>
+        <textarea id="ai-prompt-en" rows="4" readonly class="w-full text-xs font-mono p-3 bg-stone-50 border border-stone-200 rounded-xl resize-none text-stone-700"></textarea>
+      </div>
+
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-stone-800">繁體中文設計規格書提案:</label>
+          <button onclick="window.app.copyPrompt('ai-prompt-zh')" class="text-xs text-stone-900 font-semibold underline hover:text-amber-800">複製中文說明</button>
+        </div>
+        <textarea id="ai-prompt-zh" rows="4" readonly class="w-full text-xs p-3 bg-stone-50 border border-stone-200 rounded-xl resize-none text-stone-700 leading-relaxed"></textarea>
+      </div>
+
+      <div class="pt-2 flex justify-end">
+        <button onclick="window.app.closeAIPromptModal()" class="px-5 py-2 bg-stone-900 text-white text-xs font-semibold rounded-xl hover:bg-stone-800 transition">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 提示通知條 -->
+  <div id="toast" class="fixed top-16 left-1/2 -translate-x-1/2 bg-stone-900 text-white px-5 py-2.5 rounded-full text-xs font-medium shadow-xl z-50 transition-all duration-300 opacity-0 translate-y-4 pointer-events-none">
+    Notification
+  </div>
+
+  <!-- Tab 切換邏輯 -->
+  <script>
+    function switchTab(tabName) {
+      const tabs = ['materials', 'photo', 'advice', 'youtube'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-btn-${t}`);
+        const content = document.getElementById(`tab-content-${t}`);
+        const isActive = t === tabName;
+        if (btn) {
+          btn.classList.toggle('border-stone-900', isActive);
+          btn.classList.toggle('text-stone-900', isActive);
+          btn.classList.toggle('border-transparent', !isActive);
+          btn.classList.toggle('text-stone-500', !isActive);
+        }
+        if (content) {
+          content.classList.toggle('hidden', !isActive);
+        }
+      });
+    }
+  </script>
+
+  <!-- 程式模組載入 -->
+  <script src="lib/three.min.js"></script>
+  <script src="lib/OrbitControls.js"></script>
+  <script src="js/procedural-textures.js"></script>
+  <script src="js/materials-data.js"></script>
+  <script src="js/advice-engine.js"></script>
+  <script src="js/youtube-cases-data.js"></script>
+  <script src="js/room-model.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>

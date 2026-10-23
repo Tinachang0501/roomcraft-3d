@@ -1,0 +1,172 @@
+/* Custom Styles for RoomCraft 3D */
+
+:root {
+  --primary-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans TC", Arial, sans-serif;
+  --bg-main: #FBF9F5;
+  --panel-bg: rgba(255, 255, 255, 0.88);
+  --border-subtle: #E8E3DA;
+}
+
+body {
+  font-family: var(--primary-font);
+  background-color: var(--bg-main);
+  color: #2D3139;
+  overflow-x: hidden;
+  user-select: none;
+}
+
+/* 玻璃擬態質感 (Glassmorphism) */
+.glass-panel {
+  background: var(--panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 32px rgba(35, 30, 20, 0.05);
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(220, 215, 205, 0.5);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-pill:hover {
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* 自訂精緻滑桿 (Range Slider) */
+input[type=range] {
+  -webkit-appearance: none;
+  background: #E5DFC8;
+  height: 6px;
+  border-radius: 9999px;
+  outline: none;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #333333;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  transition: transform 0.1s ease;
+}
+
+input[type=range]::-webkit-slider-thumb:hover {
+  transform: scale(1.18);
+  background: #C8A365;
+}
+
+/* 3D 畫布與全螢幕覆蓋控制層 */
+#canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 1rem;
+}
+
+#canvas-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+  outline: none;
+}
+
+/* 視角覆蓋控制項浮動欄 */
+.viewport-overlay {
+  position: absolute;
+  pointer-events: none;
+}
+
+.viewport-overlay > * {
+  pointer-events: auto;
+}
+
+/* 第一人稱虛擬行走控制盤 */
+.walk-control-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 42px);
+  grid-template-rows: repeat(2, 42px);
+  gap: 6px;
+}
+
+.pad-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 32, 38, 0.72);
+  color: white;
+  border-radius: 8px;
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+}
+
+.pad-btn:active {
+  background: #C8A365;
+  transform: scale(0.92);
+}
+
+/* 色彩比例條動畫 */
+.ratio-bar-segment {
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease;
+}
+
+/* 精選材質卡片選中特效 */
+.material-chip {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 2px solid transparent;
+}
+
+.material-chip.active {
+  border-color: #333333;
+  transform: scale(1.02);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+}
+
+/* 捲軸美化 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D5CEBE;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B8B09E;
+}
+
+/* 影片卡片 hover 動畫 */
+.video-card {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.video-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* 列印 / PDF 報告格式優化 */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}
